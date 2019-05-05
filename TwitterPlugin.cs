@@ -176,12 +176,49 @@ namespace DNWS
                 context.SaveChanges();
             }
         }
+        public void DelUser(string name)
+        {
+            if (name == null)
+            {
+                throw new Exception("User is not set");
+            }
+
+            using (var context = new TweetContext())
+            {
+                List<User> userlist = context.Users.Where(b => b.Name.Equals(name)).ToList();
+                if (userlist.Count <= 0)
+                {
+                    throw new Exception("User doesn't exist");
+                }
+                List<User> following = context.Users.Where(b => true).Include(b => b.Following).ToList();
+                foreach (User tmpUser in following)
+                {
+                    Twitter toDel = new Twitter(tmpUser.Name);
+                    toDel.RemoveFollowing(userlist[0].Name);
+                }
+                context.Users.Remove(userlist[0]);
+                context.SaveChanges();
+            }
+        }
 
         public static bool IsValidUser(string name, string password)
         {
             using (var context = new TweetContext())
             {
                 List<User> userlist = context.Users.Where(b => b.Name.Equals(name) && b.Password.Equals(password)).ToList();
+                if (userlist.Count == 1)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool IsUserExist(string name)
+        {
+            using (var context = new TweetContext())
+            {
+                List<User> userlist = context.Users.Where(b => b.Name.Equals(name)).ToList();
                 if (userlist.Count == 1)
                 {
                     return true;
@@ -273,7 +310,7 @@ namespace DNWS
         }
 
 
-        public HTTPResponse GetResponse(HTTPRequest request)
+        public virtual HTTPResponse GetResponse(HTTPRequest request)
         {
             HTTPResponse response = new HTTPResponse(200);
             StringBuilder sb = new StringBuilder();
